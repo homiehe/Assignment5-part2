@@ -1,0 +1,176 @@
+---
+title: "Assignment 5"
+author: "Hongyi He"
+date: "2018/3/25"
+output: slidy_presentation
+---
+
+```{r, echo = T, include=F}
+library(tidyverse)
+library(readxl)
+library(stringr)
+library(ggplot2)
+```
+
+# 1.Chemicals in Brocoli
+
+## 1.1. Data preprocessing
+  The rows in red show the value of LD50, which means the amount of a toxic agent that is sufficient to kill 50 percent of a population of animals within a certain time, the unit of which is mg/kg.
+  These blue rows show the real content of chemcial in vegetable, the unit of which is lbs.(I would change the unit later)
+  Since those two chemical facts have different unit, I do a little calculation to unify their unit.
+  
+  1) Using 1 Lb = 453592 mg, I changed the unit of toxic chemcial in Brocoli from Lb into mg.
+  
+  2) According to the U.S. Centers for Disease Control and Prevention (CDC), The average adult American man's body weight is 88.768027 kg. So I multiply it with the value of LD50 to get a toxicity level of exact chemical for human.
+  
+  3) Since the samples were collected in four years and there is no big difference in toxicity among most of the sample data. I picked those with most abnormal data, which is the brocoli data in 2006 and cauliflower data in 2006, because they have the highest relative content of toxic chemcials.
+
+# 1.Chemicals in Brocoli (2006)
+
+## 1.2. Basic Analysis
+
+```{r, echo = F, warning=F}
+chemical_tox <- read.csv("chemical_tox.csv")
+
+veg_data3<-read.csv("veg_data3.csv")
+
+veg_data3<-as.tibble(veg_data3)
+
+veg_data3$Value <- as.numeric(veg_data3$Value)
+
+# get the data with toxicity info in it
+
+chemical_tox <- as.tibble(chemical_tox)
+
+chemical_tox$X <- as.integer(chemical_tox$X)
+
+chemical_tox$Name <- as.character(chemical_tox$Name)
+
+chemical_tox$ID <- as.character(chemical_tox$ID)
+
+chemical_tox <- chemical_tox %>% select(-ID)
+
+chemical_tox$X <- chemical_tox$X*88.768027
+
+broc <- veg_data3 %>% filter(label == "RESTRICTED USE CHEMICAL", Commodity == "BROCCOLI", Unit.of.Measurement==" MEASURED IN LB")
+
+broc$Value <- as.numeric(broc$Value)
+
+# change the unit of toxicity
+broc$Value <- broc$Value*0.453592
+
+broc <- left_join(broc,chemical_tox,by="Name")
+
+broc <- rename(broc,Real=Value,LD50=X)
+
+broc1 <- broc
+
+broc <- broc %>% gather(Real , LD50 , key="Toxicity", value="value")
+
+ggplot(broc, aes(x= Name, y=value )) + 
+  geom_bar(stat="identity",position = "dodge",aes(fill=Toxicity)) + 
+  labs(y = "Values(mg) ",x = "Chemical Name") +
+  coord_flip()+
+  labs(title="LD50(mg/kg) for human and Real content(mg) of Brocoli")
+```
+
+  As we can see in the graph above, CHILORANTRANILIPROLE has the highest LD50 level, with relatively low real content, which indicates an acceptable content of this chemical. 
+  
+  However, this graph just show the comparison between the real content and LD50 level, we also want to know the detailed information about the content of toxic chemical in Brocoli, comparing to their LD50 value. So that we could know which chemical does the greatest harm to humanity.
+
+# 1.Chemicals in Brocoli (2006)
+
+## 1.3. Relative Toxicity Analysis
+
+```{r, echo = F, warning=F}
+broc1 <- broc1 %>% mutate(tox = Real/LD50)
+
+ggplot(broc1, aes(x= Name, y=tox )) + 
+  geom_bar(stat="identity",position = "dodge") + 
+  labs(y = "relative poisonousness",x = "Chemical Name") +
+  coord_flip()+
+  labs(title="Relative toxicity of chemical for human in Brocoli")
+```
+
+  As we can see in the graph above, the most poisonous chemical named DISULFOTON, a toxic systemic insecticide, does the greatest harm to humanity. Since its content in Brocoli is 20 times of its LD50 value, which is a high level compared with other chemicals. 
+  
+  The second and third poisonous chemical named DIAZINON and METHOMYL, which content in Brocoli is 2 times of its LD50 value. 
+  
+# 1.Chemicals in Brocoli (2006)
+
+## 1.4. Relative Log Toxicity Analysis
+
+```{r, echo = F, warning=F}
+broc1 <- broc1 %>% mutate(tox = log(Real/LD50))
+
+ggplot(broc1, aes(x= Name, y=tox )) + 
+  geom_bar(stat="identity",position = "dodge") + 
+  labs(y = "relative poisonousness",x = "Chemical Name") +
+  coord_flip()+
+  labs(title="Relative toxicity of chemical for human in Brocoli")
+```
+  
+  If we take log of the relative poisonousness, we can see it clearer, the top 3 toxic chemicals are shown in the postive part of x-axis, indicating the ratio of the real content to LD50 is higher than 1. 
+
+# 2.Chemicals in Cauliflower (2006)
+
+  We do the same treatment to Cauliflower
+
+## 2.1. Basic Analysis
+```{r, echo = F, warning=F}
+Caul <- veg_data3 %>% filter(label == "RESTRICTED USE CHEMICAL", Commodity == "CAULIFLOWER", Unit.of.Measurement==" MEASURED IN LB")
+
+Caul$Value <- as.numeric(Caul$Value)
+
+Caul$Value <- Caul$Value*0.453592
+
+Caul <- left_join(Caul,chemical_tox,by="Name")
+
+Caul <- rename(Caul,Real=Value,LD50=X)
+
+Caul1 <- Caul
+
+Caul <- Caul %>% gather(Real , LD50 , key="Toxicity", value="value")
+
+#plot the Cauliflower 
+ggplot(Caul, aes(x= Name, y=value )) + 
+  geom_bar(stat="identity",position = "dodge",aes(fill=Toxicity)) + 
+  labs(y = "Values(mg) ",x = "Chemical Name") +
+  coord_flip()+
+  labs(title="LD50(mg/kg) for human and Real content(mg) of Brocoli")
+```
+  As we can see in the graph above, CHILORANTRANILIPROLE has the highest LD50 level, with relatively low real content, which indicates an acceptable content of this chemical. 
+  
+  However, we still need relative content analysis to investigate the poisonousness of chemical in Cauliflower.
+
+# 2.Chemicals in Cauliflower (2006)
+
+## 2.2. Relative Toxicity Analysis
+```{r, echo = F, warning=F}
+Caul1 <- Caul1 %>% mutate(tox = Real/LD50)
+
+ggplot(Caul1, aes(x= Name, y=tox )) + 
+  geom_bar(stat="identity",position = "dodge") + 
+  labs(y = "relative poisonousness",x = "Chemical Name") +
+  coord_flip()+
+  labs(title="Relative toxicity of chemical for human in Cauliflower")
+```
+
+  The situation is more optimistic in Cauliflower than the Brocoli. Here, the most poisonous chemical named DIAZINON, an organophosphorus insecticide, does the greatest harm to humanity, while its content in Brocoli is only 0.35 of its LD50 value, which is a relatively low level compared with even the third poisonous chemical in Brocoli. 
+  
+  The second and third poisonous chemical named METHOMYL and LAMBDA-CYHALOTHRIN, which content in Cauliflower is 0.17 and 0.04 of its LD50 value. From the relative poisonousness diagram, we can see that the Cauliflower is much healthier than Brocoli, considering the toxicity of its chemical content.
+
+# 2.Chemicals in Cauliflower (2006)
+
+## 2.3. Relative Log Toxicity Analysis
+```{r, echo = F, warning=F}
+Caul1 <- Caul1 %>% mutate(tox = log(Real/LD50))
+
+ggplot(Caul1, aes(x= Name, y=tox )) + 
+  geom_bar(stat="identity",position = "dodge") + 
+  labs(y = "relative poisonousness",x = "Chemical Name") +
+  coord_flip()+
+  labs(title="Relative toxicity of chemical for human in Cauliflower")
+```
+
+ The log graph is clearer. Since no chemical in Cauliflower is on postive part of x-axis, there is no toxic chemical's content is higher than its LD50 value in Cauliflower.
